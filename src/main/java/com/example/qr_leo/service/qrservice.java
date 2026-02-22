@@ -57,7 +57,7 @@ public class qrservice {
     // ==============================
     public byte[] generateQR(Integer id) throws Exception {
 
-        String text = "https://leo-holi-gateway.netlify.app/Ticket-ID-/" + id;
+        String text = "https://leo-holi-gateway.netlify.app/" + id;
 
         QRCodeWriter writer = new QRCodeWriter();
         BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, 300, 300);
@@ -133,8 +133,8 @@ public class qrservice {
 
                             "<p><b>Date:</b> 8/3/2025</p>" +
                             "<p><b>Time:</b> 3:00 PM – 8:00 PM</p>" +
-                            "<p><b>Venue:</b> SRK Miraj Cinemas Theater</p>" +
-                            "<p><b>Landmark:</b> Opposite Prasanna Groups</p>" +
+                            "<p><b>Venue:</b>  Opposite Prasanna Groups SRK Miraj Cinemas Theater Opposite</p>" +
+
 
                             "<p><b>Location:</b> " +
                             "<a href='https://maps.app.goo.gl/H3BKmPwXwwwidbxR9' target='_blank' " +

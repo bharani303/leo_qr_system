@@ -15,7 +15,7 @@ public class qrcontroller {
     @Autowired
     qrrepo repo;
 
-    @GetMapping("Ticket-ID-/{id}")
+    @GetMapping("{id}")
     qr_data geting(@PathVariable int id){
         return obj.getting(id);
     }
