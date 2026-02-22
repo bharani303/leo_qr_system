@@ -26,9 +26,9 @@ public class qrcontroller {
 
     @PostMapping("/leo/ticket/add_admin")
     String ticket(@RequestBody qr_data val) throws Exception {
-        repo.save(val);
+
         System.out.println("good");
-        //return obj.addticket(val);
-    return "ddd";
+        return obj.addticket(val);
+
     }
 }
