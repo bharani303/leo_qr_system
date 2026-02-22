@@ -96,7 +96,7 @@ public class qrservice {
             Map<String, Object> email = new HashMap<>();
 
             Map<String, String> sender = new HashMap<>();
-            sender.put("email", "your_verified_email@gmail.com"); // Must verify in Brevo
+            sender.put("email", "gta5lover401@gmail.com"); // Must verify in Brevo
             sender.put("name", "Leo Club");
 
             Map<String, String> toUser = new HashMap<>();
