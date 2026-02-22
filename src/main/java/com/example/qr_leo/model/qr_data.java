@@ -14,12 +14,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class qr_data {
     @Id
-
-    private Integer Id;
+    private int Id;
     private String Name;
     private String Email;
     private String PhoneNo;
-    private Integer Tickets;
+    private int Tickets;
     private Boolean valid;
 
 }
