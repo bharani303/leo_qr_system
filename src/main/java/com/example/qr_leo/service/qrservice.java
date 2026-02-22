@@ -5,20 +5,18 @@ import com.example.qr_leo.repo.qrrepo;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.resend.Resend;
-import com.resend.services.emails.model.CreateEmailOptions;
-import com.resend.services.emails.model.CreateEmailResponse;
-import com.resend.services.emails.model.Attachment;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
+import jakarta.mail.internet.MimeMessage;
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.util.Base64;
-import java.util.List;
 
 @Service
 public class qrservice {
@@ -26,8 +24,8 @@ public class qrservice {
     @Autowired
     private qrrepo obj;
 
-    @Value("${resend.api.key}")
-    private String resendApiKey;
+    @Autowired
+    private JavaMailSender mailSender;
 
     // ==============================
     // ADD TICKET
@@ -36,13 +34,10 @@ public class qrservice {
 
         try {
 
-            // Save ticket
             qr_data saved = obj.save(val);
 
-            // Generate QR
             byte[] qrImage = generateQR(saved.getId());
 
-            // Send Email
             boolean emailSent = sendMail(saved.getEmail(), qrImage);
 
             if (emailSent) {
@@ -82,37 +77,33 @@ public class qrservice {
     }
 
     // ==============================
-    // SEND EMAIL (RESEND)
+    // SEND EMAIL (GMAIL SMTP)
     // ==============================
     public boolean sendMail(String to, byte[] qrImage) {
 
         try {
 
-            String base64QR = Base64.getEncoder().encodeToString(qrImage);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            Resend resend = new Resend(resendApiKey);
+            helper.setFrom("brnprotripz1@gmail.com");
+            helper.setTo(to);
+            helper.setSubject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
+            helper.setText(buildHtmlTemplate(), true);
 
-            Attachment attachment = Attachment.builder()
-                    .fileName("LeoClub_Ticket.png")   // ✅ Correct method name
-                    .content(base64QR)
-                    .build();
+            helper.addAttachment(
+                    "LeoClub_Ticket.png",
+                    new ByteArrayResource(qrImage)
+            );
 
-            CreateEmailOptions email = CreateEmailOptions.builder()
-                    .from("Leo Club <onboarding@resend.dev>")
-                    .to(to)
-                    .subject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟")
-                    .html(buildHtmlTemplate())
-                    .attachments(List.of(attachment))
-                    .build();
+            mailSender.send(message);
 
-            CreateEmailResponse response = resend.emails().send(email);
-
-            System.out.println("Email Sent Successfully. ID: " + response.getId());
+            System.out.println("Gmail Email Sent Successfully");
 
             return true;
 
         } catch (Exception e) {
-            System.out.println("Resend Email Failed: " + e.getMessage());
+            System.out.println("Gmail Email Failed: " + e.getMessage());
             return false;
         }
     }
