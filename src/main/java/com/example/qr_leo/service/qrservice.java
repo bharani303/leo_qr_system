@@ -31,7 +31,6 @@ public class qrservice {
 
         try {
 
-            // 🔥 IMPORTANT (Fix DB valid column issue)
             val.setValid(true);
 
             // 1️⃣ Save ticket
@@ -41,7 +40,7 @@ public class qrservice {
             Integer generatedId = saved.getId();
             byte[] qrImage = generateQR(generatedId);
 
-            // 3️⃣ Send Email via Brevo REST API
+            // 3️⃣ Send Email via MailerSend
             sendMail(saved.getEmail(), qrImage);
 
             return "Ticket Generated & Email Sent Successfully ✅";
@@ -77,13 +76,13 @@ public class qrservice {
     }
 
     // ==============================
-    // SEND EMAIL (BREVO REST API)
+    // SEND EMAIL (MAILERSEND HTTP)
     // ==============================
     public void sendMail(String to, byte[] qrImage) {
 
         try {
 
-            String apiKey = System.getenv("BREVO_API_KEY");
+            String apiKey = System.getenv("MAILERSEND_API_KEY");
 
             String base64QR = Base64.getEncoder().encodeToString(qrImage);
 
@@ -91,36 +90,38 @@ public class qrservice {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("api-key", apiKey);
+            headers.set("Authorization", "Bearer " + apiKey);
 
             Map<String, Object> email = new HashMap<>();
 
-            Map<String, String> sender = new HashMap<>();
-            sender.put("email", "gta5lover401@gmail.com"); // Must verify in Brevo
-            sender.put("name", "Leo Club");
+            // MUST VERIFY THIS EMAIL IN MAILERSEND
+            Map<String, String> from = new HashMap<>();
+            from.put("email", "noreply@test-65qngkdm2y8lwr12.mlsender.net");
+            from.put("name", "Leo Club");
 
             Map<String, String> toUser = new HashMap<>();
             toUser.put("email", to);
+            toUser.put("name", "Participant");
 
-            Map<String, Object> attachment = new HashMap<>();
-            attachment.put("name", "LeoClub_Holi_Ticket.png");
+            Map<String, String> attachment = new HashMap<>();
+            attachment.put("filename", "LeoClub_Ticket.png");
             attachment.put("content", base64QR);
 
-            email.put("sender", sender);
+            email.put("from", from);
             email.put("to", List.of(toUser));
             email.put("subject", "🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
-            email.put("htmlContent",
+            email.put("html",
                     "<h1>🌈 Leo Club Holi 2026 🎉</h1>" +
-                            "<p>Your ticket has been successfully confirmed!</p>" +
+                            "<p>Your ticket has been successfully confirmed.</p>" +
                             "<p>Please show the attached QR code at entry.</p>"
             );
-            email.put("attachment", List.of(attachment));
+            email.put("attachments", List.of(attachment));
 
             HttpEntity<Map<String, Object>> request =
                     new HttpEntity<>(email, headers);
 
             restTemplate.postForEntity(
-                    "https://api.brevo.com/v3/smtp/email",
+                    "https://api.mailersend.com/v1/email",
                     request,
                     String.class
             );
