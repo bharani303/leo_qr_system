@@ -1,6 +1,7 @@
 package com.example.qr_leo.controller;
 
 import com.example.qr_leo.model.qr_data;
+import com.example.qr_leo.repo.qrrepo;
 import com.example.qr_leo.service.qrservice;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 public class qrcontroller {
     @Autowired
     qrservice obj;
+    @Autowired
+    qrrepo repo;
 
     @GetMapping("/{id}")
     qr_data geting(@PathVariable int id){
