@@ -145,15 +145,13 @@ public class qrservice {
             tickets -= 1;
             temp.setTickets(tickets);
 
-            if (tickets == 0) {
-                temp.setValid(false);
-            }
+
 
             obj.save(temp);   // 🔥 IMPORTANT (Save changes)
 
             return "Scanned Successfully";
         } else {
-            temp.setValid(false);
+
             obj.save(temp);   // Save here also
             return "TICKET USED";
         }

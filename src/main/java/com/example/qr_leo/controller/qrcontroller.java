@@ -23,6 +23,7 @@ public class qrcontroller {
 
     @PostMapping("/leo/ticket/add_admin")
     String ticket(@RequestBody qr_data val) throws Exception {
+        System.out.println("good");
         return obj.addticket(val);
     }
 }
