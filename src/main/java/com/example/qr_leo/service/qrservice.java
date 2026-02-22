@@ -5,45 +5,56 @@ import com.example.qr_leo.repo.qrrepo;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class qrservice {
 
-@Autowired
+    @Autowired
     qrrepo obj;
 
+    // ==============================
+    // ADD TICKET
+    // ==============================
     public String addticket(qr_data val) {
 
-        // 1️⃣ Save ticket
-        qr_data saved = obj.save(val);
-
         try {
+
+            // 🔥 IMPORTANT (Fix DB valid column issue)
+            val.setValid(true);
+
+            // 1️⃣ Save ticket
+            qr_data saved = obj.save(val);
+
             // 2️⃣ Generate QR
             Integer generatedId = saved.getId();
             byte[] qrImage = generateQR(generatedId);
 
-            // 3️⃣ Send Email
+            // 3️⃣ Send Email via Brevo REST API
             sendMail(saved.getEmail(), qrImage);
 
+            return "Ticket Generated & Email Sent Successfully ✅";
+
         } catch (Exception e) {
-            e.printStackTrace();   // log error
+            e.printStackTrace();
             return "Ticket Saved But Email Failed ⚠";
         }
-
-        return "Ticket Generated & Email Sent Successfully ✅";
     }
 
+    // ==============================
+    // QR GENERATOR
+    // ==============================
     public byte[] generateQR(Integer id) throws Exception {
 
         String text = "Ticket-ID-" + id;
@@ -64,101 +75,81 @@ public class qrservice {
 
         return baos.toByteArray();
     }
-    @Autowired
-    private JavaMailSender mailSender;
-    @Async
-    public void sendMail(String to, byte[] qrImage) throws Exception {
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    // ==============================
+    // SEND EMAIL (BREVO REST API)
+    // ==============================
+    public void sendMail(String to, byte[] qrImage) {
 
-        helper.setTo(to);
-        helper.setFrom("brnprotripz1@gmail.com", "Leo Club");
-        helper.setSubject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
+        try {
 
-        String htmlContent = """
-        <html>
-            <body style="font-family: Arial, sans-serif; text-align:center;">
-                <h1 style="color:#ff5722;">🌈 Leo Club Holi 2026 🎉</h1>
-                
-                <p style="font-size:16px;">
-                    Dear Participant,
-                </p>
-                
-                <p style="font-size:16px;">
-                    Your ticket has been successfully confirmed!
-                </p>
+            String apiKey = System.getenv("BREVO_API_KEY");
 
-                <p style="font-size:16px;">
-                    Please find your <strong>QR Code</strong> attached to this email.
-                </p>
+            String base64QR = Base64.getEncoder().encodeToString(qrImage);
 
-                <p style="font-size:16px;">
-                    🎨 Get ready for colors, music, and unforgettable memories!
-                </p>
+            RestTemplate restTemplate = new RestTemplate();
 
-                <br>
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
 
-                <p style="font-size:14px; color:gray;">
-                    📍 Venue: [Add Venue Here]<br>
-                    📅 Date: [Add Date Here]<br>
-                    ⏰ Time: [Add Time Here]
-                </p>
+            Map<String, Object> email = new HashMap<>();
 
-                <br>
+            Map<String, String> sender = new HashMap<>();
+            sender.put("email", "your_verified_email@gmail.com"); // Must verify in Brevo
+            sender.put("name", "Leo Club");
 
-                <p style="font-weight:bold;">
-                    Show this QR code at the entry gate.
-                </p>
+            Map<String, String> toUser = new HashMap<>();
+            toUser.put("email", to);
 
-                <br><br>
+            Map<String, Object> attachment = new HashMap<>();
+            attachment.put("name", "LeoClub_Holi_Ticket.png");
+            attachment.put("content", base64QR);
 
-                <p style="color:#555;">
-                    Regards,<br>
-                    Leo Club Team
-                </p>
-            </body>
-        </html>
-        """;
+            email.put("sender", sender);
+            email.put("to", List.of(toUser));
+            email.put("subject", "🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
+            email.put("htmlContent",
+                    "<h1>🌈 Leo Club Holi 2026 🎉</h1>" +
+                            "<p>Your ticket has been successfully confirmed!</p>" +
+                            "<p>Please show the attached QR code at entry.</p>"
+            );
+            email.put("attachment", List.of(attachment));
 
-        helper.setText(htmlContent, true); // true = HTML content
+            HttpEntity<Map<String, Object>> request =
+                    new HttpEntity<>(email, headers);
 
-        helper.addAttachment("LeoClub_Holi_Ticket.png",
-                new ByteArrayResource(qrImage));
+            restTemplate.postForEntity(
+                    "https://api.brevo.com/v3/smtp/email",
+                    request,
+                    String.class
+            );
 
-        mailSender.send(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-
-
-
-
-
-
-
+    // ==============================
+    // GET TICKET
+    // ==============================
     public qr_data getting(int val) {
         return obj.findById(val).orElse(null);
     }
 
+    // ==============================
+    // SCAN TICKET
+    // ==============================
     public String putting(int id) {
 
         qr_data temp = obj.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invalid QR ID"));
 
-        int tickets = temp.getTickets();
-
-        if (tickets > 0) {
-            tickets -= 1;
-            temp.setTickets(tickets);
-
-
-
-            obj.save(temp);   // 🔥 IMPORTANT (Save changes)
-
+        if (temp.getTickets() > 0) {
+            temp.setTickets(temp.getTickets() - 1);
+            obj.save(temp);
             return "Scanned Successfully";
         } else {
-
-            obj.save(temp);   // Save here also
             return "TICKET USED";
         }
     }

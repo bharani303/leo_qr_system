@@ -20,5 +20,6 @@ public class qr_data {
     private String Email;
     private String PhoneNo;
     private Integer Tickets;
+    private Boolean valid;
 
 }
