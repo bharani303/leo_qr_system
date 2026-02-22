@@ -6,17 +6,20 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
+import com.resend.Resend;
+import com.resend.services.emails.model.CreateEmailOptions;
+import com.resend.services.emails.model.CreateEmailResponse;
+import com.resend.services.emails.model.Attachment;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
-import jakarta.mail.internet.MimeMessage;
-
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import java.util.List;
 
 @Service
 public class qrservice {
@@ -24,8 +27,8 @@ public class qrservice {
     @Autowired
     private qrrepo obj;
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     // ==============================
     // ADD TICKET
@@ -77,33 +80,40 @@ public class qrservice {
     }
 
     // ==============================
-    // SEND EMAIL (GMAIL SMTP)
+    // SEND EMAIL (RESEND API)
     // ==============================
     public boolean sendMail(String to, byte[] qrImage) {
 
         try {
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            String base64QR = Base64.getEncoder().encodeToString(qrImage);
 
-            helper.setFrom("brnprotripz1@gmail.com");
-            helper.setTo(to);
-            helper.setSubject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
-            helper.setText(buildHtmlTemplate(), true);
+            Resend resend = new Resend(resendApiKey);
 
-            helper.addAttachment(
-                    "LeoClub_Ticket.png",
-                    new ByteArrayResource(qrImage)
-            );
+            Attachment attachment = Attachment.builder()
+                    .fileName("LeoClub_Ticket.png")   // ✅ correct method
+                    .content(base64QR)
+                    .build();
 
-            mailSender.send(message);
+            CreateEmailOptions email = CreateEmailOptions.builder()
+                    // 🔁 CHANGE THIS AFTER DOMAIN VERIFICATION
+                    .from("Leo Club <noreply@aurainfotechsolutions.live>")
+                    // After verify:
+                    // .from("Leo Club <noreply@aurainfotechsolutions.live>")
+                    .to(to)
+                    .subject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟")
+                    .html(buildHtmlTemplate())
+                    .attachments(List.of(attachment))
+                    .build();
 
-            System.out.println("Gmail Email Sent Successfully");
+            CreateEmailResponse response = resend.emails().send(email);
+
+            System.out.println("Email Sent Successfully. ID: " + response.getId());
 
             return true;
 
         } catch (Exception e) {
-            System.out.println("Gmail Email Failed: " + e.getMessage());
+            System.out.println("Resend Email Failed: " + e.getMessage());
             return false;
         }
     }
