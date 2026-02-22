@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -22,22 +23,27 @@ public class qrservice {
 @Autowired
     qrrepo obj;
 
-    public String addticket(qr_data val) throws Exception {
+    public String addticket(qr_data val) {
 
         // 1️⃣ Save ticket
         qr_data saved = obj.save(val);
 
-        // 2️⃣ Get generated ID
-        Integer generatedId = saved.getId();
+        try {
+            // 2️⃣ Generate QR
+            Integer generatedId = saved.getId();
+            byte[] qrImage = generateQR(generatedId);
 
-        // 3️⃣ Generate QR using generated ID
-        byte[] qrImage = generateQR(generatedId);
+            // 3️⃣ Send Email
+            sendMail(saved.getEmail(), qrImage);
 
-        // 4️⃣ Send Email with QR
-        sendMail(saved.getEmail(), qrImage);
+        } catch (Exception e) {
+            e.printStackTrace();   // log error
+            return "Ticket Saved But Email Failed ⚠";
+        }
 
         return "Ticket Generated & Email Sent Successfully ✅";
     }
+
     public byte[] generateQR(Integer id) throws Exception {
 
         String text = "Ticket-ID-" + id;
@@ -60,7 +66,7 @@ public class qrservice {
     }
     @Autowired
     private JavaMailSender mailSender;
-
+    @Async
     public void sendMail(String to, byte[] qrImage) throws Exception {
 
         MimeMessage message = mailSender.createMimeMessage();
