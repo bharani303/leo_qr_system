@@ -5,25 +5,29 @@ import com.example.qr_leo.repo.qrrepo;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.resend.Resend;
+import com.resend.services.emails.model.CreateEmailOptions;
+import com.resend.services.emails.model.CreateEmailResponse;
+import com.resend.services.emails.model.Attachment;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class qrservice {
 
     @Autowired
-    qrrepo obj;
+    private qrrepo obj;
+
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     // ==============================
     // ADD TICKET
@@ -32,23 +36,24 @@ public class qrservice {
 
         try {
 
-
-
-            // 1️⃣ Save ticket
+            // Save ticket
             qr_data saved = obj.save(val);
 
-            // 2️⃣ Generate QR
-            Integer generatedId = saved.getId();
-            byte[] qrImage = generateQR(generatedId);
+            // Generate QR
+            byte[] qrImage = generateQR(saved.getId());
 
-            // 3️⃣ Send Email via MailerSend
-            sendMail(saved.getEmail(), qrImage);
+            // Send Email
+            boolean emailSent = sendMail(saved.getEmail(), qrImage);
 
-            return "Ticket Generated & Email Sent Successfully ✅";
+            if (emailSent) {
+                return "Ticket Generated & Email Sent Successfully ✅";
+            } else {
+                return "Ticket Saved But Email Failed ⚠";
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "Ticket Saved But Email Failed ⚠";
+            return "Something went wrong ❌";
         }
     }
 
@@ -77,100 +82,86 @@ public class qrservice {
     }
 
     // ==============================
-    // SEND EMAIL (MAILERSEND HTTP)
+    // SEND EMAIL (RESEND)
     // ==============================
-    @Value("${mail.api.key}")
-    private String apiKy;
-    public void sendMail(String to, byte[] qrImage) {
+    public boolean sendMail(String to, byte[] qrImage) {
 
         try {
 
-            String apiKey = apiKy; // Your MailerSend API Key
-
-            // Convert QR image to Base64
             String base64QR = Base64.getEncoder().encodeToString(qrImage);
 
-            RestTemplate restTemplate = new RestTemplate();
+            Resend resend = new Resend(resendApiKey);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + apiKey);
+            Attachment attachment = Attachment.builder()
+                    .fileName("LeoClub_Ticket.png")   // ✅ Correct method name
+                    .content(base64QR)
+                    .build();
 
-            Map<String, Object> email = new HashMap<>();
+            CreateEmailOptions email = CreateEmailOptions.builder()
+                    .from("Leo Club <onboarding@resend.dev>")
+                    .to(to)
+                    .subject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟")
+                    .html(buildHtmlTemplate())
+                    .attachments(List.of(attachment))
+                    .build();
 
-            // Sender (Must be verified in MailerSend)
-            Map<String, String> from = new HashMap<>();
-            from.put("email", "noreply@test-65qngkdm2y8lwr12.mlsender.net");
-            from.put("name", "Leo Club");
+            CreateEmailResponse response = resend.emails().send(email);
 
-            // Recipient
-            Map<String, String> toUser = new HashMap<>();
-            toUser.put("email", to);
-            toUser.put("name", "Participant");
+            System.out.println("Email Sent Successfully. ID: " + response.getId());
 
-            // Attachment
-            Map<String, String> attachment = new HashMap<>();
-            attachment.put("filename", "LeoClub_Ticket.png");
-            attachment.put("content", base64QR);
-            attachment.put("type", "image/png");
-            attachment.put("disposition", "attachment");
-
-            // Email HTML Content
-            String htmlContent =
-                    "<div style='font-family: Arial, sans-serif; padding:20px; background-color:#f4f4f4;'>" +
-
-                            "<div style='max-width:600px; margin:auto; background:white; padding:30px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1);'>" +
-
-                            "<h1 style='color:#ff4d6d; text-align:center;'>🌈 Leo Club Holi 2026 🎉</h1>" +
-
-                            "<p style='font-size:16px;'>Dear Participant,</p>" +
-
-                            "<p style='font-size:16px;'>Your ticket has been <b style='color:green;'>successfully confirmed!</b> 🎟</p>" +
-
-                            "<hr style='margin:20px 0;'/>" +
-
-                            "<h2 style='color:#333;'>📅 Event Details</h2>" +
-
-                            "<p><b>Date:</b> 8/3/2025</p>" +
-                            "<p><b>Time:</b> 3:00 PM – 8:00 PM</p>" +
-                            "<p><b>Venue:</b>  Opposite Prasanna Groups SRK Miraj Cinemas Theater Opposite</p>" +
-
-
-                            "<p><b>Location:</b> " +
-                            "<a href='https://maps.app.goo.gl/H3BKmPwXwwwidbxR9' target='_blank' " +
-                            "style='color:#007bff; text-decoration:none;'>View on Google Maps 📍</a></p>" +
-
-                            "<hr style='margin:20px 0;'/>" +
-
-                            "<p style='font-size:15px;'>Please show the <b>attached QR code</b> at the entry gate for verification.</p>" +
-
-                            "<p style='font-size:15px; color:#555;'>Get ready for colors, music, dance & unlimited fun! 🌸🎶</p>" +
-
-                            "<p style='margin-top:30px;'>Regards,<br><b>Leo Club Team</b></p>" +
-
-                            "</div>" +
-                            "</div>";
-
-            email.put("from", from);
-            email.put("to", List.of(toUser));
-            email.put("subject", "🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟");
-            email.put("html", htmlContent);
-            email.put("attachments", List.of(attachment));
-
-            HttpEntity<Map<String, Object>> request =
-                    new HttpEntity<>(email, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://api.mailersend.com/v1/email",
-                    request,
-                    String.class
-            );
-
-            System.out.println("Email Sent Successfully: " + response.getStatusCode());
+            return true;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Resend Email Failed: " + e.getMessage());
+            return false;
         }
+    }
+
+    // ==============================
+    // EMAIL HTML TEMPLATE
+    // ==============================
+    private String buildHtmlTemplate() {
+
+        return """
+            <div style='font-family: Arial, sans-serif; padding:20px; background-color:#f4f4f4;'>
+
+                <div style='max-width:600px; margin:auto; background:white; padding:30px; border-radius:12px;'>
+
+                    <h1 style='color:#ff4d6d; text-align:center;'>🌈 Leo Club Holi 2026 🎉</h1>
+
+                    <p>Dear Participant,</p>
+
+                    <p>Your ticket has been <b style='color:green;'>successfully confirmed!</b> 🎟</p>
+
+                    <hr/>
+
+                    <h2>📅 Event Details</h2>
+
+                    <p><b>Date:</b> 8/3/2025</p>
+                    <p><b>Time:</b> 3:00 PM – 8:00 PM</p>
+                    <p><b>Venue:</b> SRK Miraj Cinemas Theater</p>
+                    <p><b>Landmark:</b> Opposite Prasanna Groups</p>
+
+                    <p>
+                        <a href='https://maps.app.goo.gl/H3BKmPwXwwwidbxR9'>
+                        View on Google Maps 📍
+                        </a>
+                    </p>
+
+                    <hr/>
+
+                    <p>Please show the attached QR code at entry.</p>
+
+                    <p>Get ready for colors, music, dance & unlimited fun! 🌸🎶</p>
+
+                    <p style='margin-top:30px;'>
+                        Regards,<br>
+                        <b>Leo Club Team</b>
+                    </p>
+
+                </div>
+            </div>
+        """;
     }
 
     // ==============================
