@@ -6,6 +6,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -31,7 +32,7 @@ public class qrservice {
 
         try {
 
-            val.setValid(true);
+
 
             // 1️⃣ Save ticket
             qr_data saved = obj.save(val);
@@ -78,11 +79,13 @@ public class qrservice {
     // ==============================
     // SEND EMAIL (MAILERSEND HTTP)
     // ==============================
+    @Value("${mail.api.key}")
+    private String apiKy;
     public void sendMail(String to, byte[] qrImage) {
 
         try {
 
-            String apiKey = System.getenv("MAILERSEND_API_KEY");
+            String apiKey =  apiKy;
 
             String base64QR = Base64.getEncoder().encodeToString(qrImage);
 
