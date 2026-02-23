@@ -102,7 +102,7 @@ public class qrservice {
                     // After verify:
                     // .from("Leo Club <noreply@aurainfotechsolutions.live>")
                     .to(to)
-                    .subject("🌈 Leo Club Holi 2026 - Ticket Confirmation 🎟")
+                    .subject(" Leo Club Holi 2026 - Ticket Confirmation 🎟")
                     .html(buildHtmlTemplate())
                     .attachments(List.of(attachment))
                     .build();
@@ -129,7 +129,7 @@ public class qrservice {
 
                 <div style='max-width:600px; margin:auto; background:white; padding:30px; border-radius:12px;'>
 
-                    <h1 style='color:#ff4d6d; text-align:center;'>🌈 Leo Club Holi 2026 🎉</h1>
+                    <h1 style='color:#ff4d6d; text-align:center;'> Leo Club Holi 2026 🎉</h1>
 
                     <p>Dear Participant,</p>
 
