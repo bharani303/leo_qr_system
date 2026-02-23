@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -187,5 +188,18 @@ public class qrservice {
         } else {
             return "TICKET USED !";
         }
+    }
+List<qr_data> list=new ArrayList<>();
+    public String getTotal() {
+        list=obj.findAll();
+        long a=0;
+        for(qr_data x:list){
+            a+=Long.parseLong(x.getAmount());
+        }
+      return  String.valueOf(a);
+    }
+
+    public List<qr_data> getdatabase() {
+    return obj.findAll();
     }
 }

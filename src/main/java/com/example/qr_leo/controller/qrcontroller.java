@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @CrossOrigin
 public class qrcontroller {
@@ -14,6 +16,14 @@ public class qrcontroller {
     qrservice obj;
     @Autowired
     qrrepo repo;
+    @GetMapping("/total")
+    String total(){
+        return obj.getTotal();
+    }
+  @GetMapping("/leoholi/database")
+  List<qr_data> list(){
+        return obj.getdatabase();
+  }
 
     @GetMapping("{id}")
     qr_data geting(@PathVariable int id){

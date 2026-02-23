@@ -19,6 +19,7 @@ public class qr_data {
     private String email;
     private String phoneno;
     private int tickets;
+    private String amount;
 
 
 }
